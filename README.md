@@ -1,122 +1,140 @@
 # ClearVue Business Intelligence System
 
-A group project exploring how ClearVue Ltd. could replace slow, manual sales reporting with a flexible NoSQL-based business intelligence (BI) solution. The design focuses on ClearVue’s custom financial calendar, sales performance reporting, and a data foundation that can grow to support supplier analytics.
+A group project focused on designing and presenting a modern NoSQL-based Business Intelligence (BI) solution for ClearVue Ltd. The project explores how a document database can support sales analysis, financial-period reporting, and future supplier analytics in a way that is more flexible than a traditional relational model.
 
 > **Project:** CMPG321 — Data Dominators, Group 30  
 > **Repository:** Enterprise NoSQL Business Intelligence (BI) System  
 > **Status:** Academic project and prototype demonstration
 
-## Why this project exists
+## Overview
 
-ClearVue Ltd. needs timely, dependable answers to questions about sales: how performance changes over time, which products and regions are doing well, and where managers should focus next. Its financial periods do not follow ordinary calendar months, which makes consistent reporting more difficult. The company also expects to place greater emphasis on supplier analytics in the future.
+ClearVue Ltd. needs a reporting solution that can support daily, weekly, monthly, quarterly, and annual sales analysis while aligning with its custom financial calendar. The company’s financial periods do not follow the normal calendar structure, which makes consistent and accurate reporting more complex in a traditional relational setup.
 
-This project investigates a document-oriented NoSQL approach to those needs. MongoDB is proposed for storing operational and reference data, with transaction details represented in nested documents where they are naturally read together. Data processing and streaming technologies, together with a BI dashboard, form the broader proposed solution.
+This project investigates a document-oriented NoSQL design using MongoDB as the core database and Google Looker Studio for dashboard reporting. The aim is to show how data can be structured to support hierarchical, semi-structured, and growing business information while improving reporting speed and flexibility.
+
+## Business problem
+
+ClearVue currently faces challenges in producing timely and accurate business intelligence from sales data. Management needs reliable insight across multiple timeframes, including performance by customer, region, product, and representative. The reporting requirements are also shaped by ClearVue’s non-standard financial year, which runs from the last Saturday of one month to the last Friday of the next month.
+
+At the same time, the organisation expects to move toward supplier-focused analytics in the future. That means the solution must be designed with flexibility in mind, rather than relying on rigid database structures that would require major redesign as new data sources emerge.
 
 ## Project goals
 
-The solution is intended to:
+The project was designed to:
 
-- Report on sales by day, week, financial month, quarter, and year.
-- Apply ClearVue’s financial calendar consistently: a financial month runs from the last Saturday of the preceding month through the last Friday of the current month.
-- Support analysis by customer, region, representative, product, product category, and range.
-- Make it possible to extend the model for supplier-focused reporting without redesigning every existing collection.
-- Accommodate hierarchical and semi-structured information, including product attributes and customer account parameters.
-- Provide clear visual summaries and allow users to move from high-level trends toward transaction details.
-- Explore the use of streaming data, such as payment transactions, for more timely insights.
+- Support sales reporting by day, week, financial month, quarter, and year.
+- Align every report to ClearVue’s unique financial-period structure.
+- Analyse performance by customer, region, product category, product range, and representative.
+- Build a data model that can support future supplier analytics without reworking the entire system.
+- Handle nested and semi-structured data naturally.
+- Produce dashboards and visual summaries that are useful to business users.
+- Demonstrate the benefits of a NoSQL document model over a traditional relational model for this use case.
 
-## Proposed solution at a glance
+## Proposed architecture
 
-The design uses MongoDB as the document database. Data from the supplied spreadsheet files is cleaned and transformed before loading; a streaming pipeline such as Apache Kafka is proposed for incoming transactions; and a BI tool presents reports and dashboards to business users.
+The design uses MongoDB as the main database for storing customer, sales, product, purchase, payment, and supplier-related data. Reporting is delivered through Google Looker Studio dashboards, which provide an accessible way for users to view KPI summaries and drill into key business questions.
 
 ```text
-Source spreadsheets / transaction events
-                 │
-         ETL and validation
-       (Kafka for streaming events)
-                 │
-              MongoDB
-                 │
-        BI dashboards and reports
+Source data files
+        │
+        ▼
+  Data preparation / ETL
+        │
+        ▼
+      MongoDB
+        │
+        ▼
+  Google Looker Studio
+        │
+        ▼
+    Business dashboards
 ```
 
-This diagram describes the intended architecture, not a guarantee that every component is configured for one-click deployment in this repository. The project materials mention different dashboard options at different stages: Power BI appears in the requirements, while Google Looker Studio appears in the implementation report. The choice of visualization tool should therefore be confirmed against the prototype being demonstrated.
+The project materials describe a system where MongoDB stores structured and nested business data in a way that matches the way the organisation analyses it. Examples include embedded sales line items, customer account parameters, and product descriptors stored close to the main business entity they describe.
 
 ## Data model
 
-The conceptual MongoDB design groups data around the way it is used. It favors embedding information that is commonly read together, while keeping large or independently queried histories in their own collections where appropriate.
+The conceptual NoSQL design groups related information into collections so that common reporting paths are efficient and easier to query.
 
 | Collection | Purpose |
 | --- | --- |
-| `customers` | Customer profile, category and region descriptions, representative details, account parameters, and a current age-analysis summary. Recent sales may be stored as a limited subset or referenced. |
-| `sales` | Sales header information with its line items embedded, including product identifiers and transaction-time product details useful for reporting. |
-| `products` | Product master data with category, brand, range, and style details. |
-| `suppliers` | Supplier profile and payment or credit information, ready for future supplier analysis. |
-| `purchases` | Purchase transactions with their line items embedded. |
-| `payments` | Payment header information and associated payment lines. |
+| `customers` | Stores customer profile information, category and region details, representative references, account parameters, and current age-analysis summaries. |
+| `sales` | Stores sales document headers with embedded sales lines, including product and transaction details for reporting. |
+| `products` | Stores product master data, category details, brand and range information, and style-related attributes. |
+| `suppliers` | Stores supplier master information to support future supplier analytics. |
+| `purchases` | Stores purchase headers and embedded purchase lines for spend and cost analysis. |
+| `payments` | Stores payment headers and related payment details for cash-flow and payment tracking. |
 
-Embedding header and line-item data keeps a transaction together for common reads. Selected descriptive fields can be copied into transaction documents so historical reports remain useful even if a product’s current description changes. This is a deliberate read-performance and reporting trade-off; it also means that data updates and consistency rules need to be considered carefully.
+This approach supports embedded data where it is frequently accessed together, which reduces the need for complex joins and helps reporting run more naturally for business users. It also preserves flexibility because new data attributes can be added without requiring a rigid table redesign.
 
-## Reporting needs
+## Reporting and analytical needs
 
-The project documentation identifies these core analytical use cases:
+The project identifies several core business reports and performance questions in the project documentation:
 
-- **Daily sales:** Sales totals by financial day and customer type, to help spot day-to-day changes.
-- **Product trends:** Top products by revenue within product categories and ranges over a financial month.
-- **Regional performance:** Compare sales across branches, stores, or regions to inform resource allocation and planning.
-- **Supplier spend:** Purchases and associated costs by supplier, supporting future vendor comparisons.
-- **Age analysis:** Outstanding customer balances grouped into overdue periods, supporting cash-flow monitoring and credit control.
-- **Management summaries:** Weekly representative performance, quarterly regional analysis, and annual overviews.
+- **Daily sales performance:** Daily totals by customer type and sales activity.
+- **Monthly product trends:** Top products and product categories by revenue.
+- **Regional comparisons:** Sales and performance across regions and branches.
+- **Supplier analysis readiness:** Purchase and spend reporting by supplier for future supplier-focused decision making.
+- **Age analysis:** Customer balances grouped into overdue periods to support collection and credit control.
+- **Representative performance:** Weekly and monthly comparison of sales representatives.
+- **Financial-period reporting:** Monthly, quarterly, and annual views based on ClearVue’s custom financial calendar.
 
-ClearVue’s financial calendar is a central design requirement rather than a presentation detail. ETL logic and report queries must use the same period definitions so that totals reconcile across daily, monthly, quarterly, and annual views.
+The reporting design is built around data that is easy to aggregate and visualise, while also preserving the detail needed for deeper business investigation.
 
-## Technology direction
+## Why NoSQL for this project
 
-- **Database:** MongoDB, a document-oriented NoSQL database.
-- **Streaming:** Apache Kafka is proposed for transaction or payment events.
-- **Data preparation:** ETL processes to validate, transform, and load source data.
-- **Visualization:** A BI dashboarding tool, with Power BI and Google Looker Studio both referenced in the project materials.
+The NoSQL model is suitable because the business data has several characteristics that are difficult to handle efficiently with a rigid relational structure:
 
-These technologies are the documented design direction. Check the demonstration and accompanying project materials for which components are actually implemented and how they are connected.
+- hierarchical data (for example, product and customer groupings)
+- semi-structured information in different entities
+- nested transaction details
+- evolving requirements as new analytics areas are introduced
+- a need for faster, more flexible reporting and dashboard access
+
+The project therefore uses a document-oriented database to better match the real-world structure of the data and the way management wants to query it.
 
 ## Repository contents
 
-- [`Video Demonstration/`](./Video%20Demonstration/) — Group 30’s Deliverable 2B presentation video.
-- [`README.md`](./README.md) — Project overview and guide to the documented design.
+- [`Video Demonstration/`](./Video%20Demonstration/) — Video presentation for the project deliverable.
+- [`README.md`](./README.md) — Overview of the project and its design direction.
 
-The repository currently provides the project overview and presentation. It does not currently document a runnable application, ETL scripts, Kafka configuration, or database seed data. If implementation files are added, this section should be updated with their locations and verified setup instructions.
+This repository acts mainly as a project archive and presentation space for the coursework deliverables. It documents the thinking, architecture, and reporting direction rather than a full production-ready application.
 
-## Viewing the presentation
+## Presentation
 
-The recorded presentation is available here:
+The recorded presentation for this project is available here:
 
-[Watch or download the Deliverable 2B video](./Video%20Demonstration/CMPG321%20Group%2030%20Deliverable%202B%20(Compressed).mp4)
+[Watch the Deliverable 2B video](./Video%20Demonstration/CMPG321%20Group%2030%20Deliverable%202B%20(Compressed).mp4)
 
-## Team
+## Deliverables
 
-**Data Dominators — Group 30**
+The project covers the required academic deliverables:
 
-- B. Gudla (45997519) — Group Leader
-- Z. Nxesi (45183538)
-- S. N. Mazibuko (46105948)
-- M. Khoza (37600915)
-- M. Mashimbye (43314392)
+1. **Deliverable 1 — Requirements Analysis and Conceptual Design**  
+   Business requirements, source-system analysis, preliminary success criteria, and a conceptual NoSQL design.
 
-## Project deliverables
+2. **Deliverable 2A — Physical Build and Implementation**  
+   Prototype architecture, implementation approach, design trade-offs, and system documentation.
 
-The project was prepared for CMPG321 in response to ClearVue Ltd.’s RFP 02/2025:
-
-1. **Deliverable 1 — Requirements Analysis and Conceptual Design:** Business and analytical requirements, source-data analysis, preliminary success criteria, and a conceptual MongoDB model.
-2. **Deliverable 2A — Physical Build and Implementation:** The proposed system architecture, implementation approach, design trade-offs, critical success factors, and system documentation.
-3. **Deliverable 2B — Presentation:** A recorded demonstration of the proposed solution and its alignment with ClearVue’s requirements.
+3. **Deliverable 2B — Presentation**  
+   Recorded presentation of the proposed BI solution and how it aligns with ClearVue’s needs.
 
 ## Design considerations
 
-The document model is intended to reduce lookups for common reporting paths and to represent hierarchical data naturally. That does not make NoSQL universally better than a relational database: embedding can duplicate descriptive values, large or unbounded arrays need care, and analytical consistency depends on sound ETL and data-quality checks. Financial-period logic, validation of source data, and appropriate indexes are essential to producing trustworthy reports. The project’s success criteria include accurate financial reporting, correct core reports, responsive common queries, flexibility for new supplier data, and stakeholder acceptance.
+The document model supports efficient access to data that is often read together, such as sales transactions and their detailed line items. This helps reduce unnecessary joins and makes the analytics layer easier to build around business questions. However, the project also recognises that NoSQL trade-offs exist, including denormalised data and the need for strong ETL validation.
+
+The project’s success criteria focus on:
+
+- accurate financial-period reporting
+- correct generation of core reports
+- sensible query performance for interactive analysis
+- flexibility for future data changes
+- stakeholder approval of the dashboards and insights
 
 ## AI use
 
-AI tools were used during the coursework for brainstorming and initial drafting of requirements, success criteria, and conceptual schema ideas. The group’s documentation states that generated material was reviewed and adapted against the supplied data and project context. AI assistance was used as a drafting aid; it does not replace validation of the model, implementation, or reported results.
+AI tools were used during the project to help structure initial drafts, generate ideas for requirements, and support conceptual schema design. The project documentation notes that all outputs were reviewed and adapted against the original business context and supplied data to keep the work accurate and relevant.
 
 ---
 
-*Course project for CMPG321. ClearVue Ltd. is the fictional business context supplied in the project brief.*
+*This project is part of the CMPG321 coursework and uses the fictional ClearVue Ltd. scenario provided in the project brief.*
